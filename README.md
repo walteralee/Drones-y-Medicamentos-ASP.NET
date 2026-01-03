@@ -14,14 +14,15 @@ Drones-y-Medicamentos-ASP.NET/
 
 
 > ⚠️ La carpeta `database/` **NO se incluye en el repositorio**.  
-> Se crea automáticamente al ejecutar el backend.
+> Se genera automáticamente al iniciar el backend.
 
 ---
 
-## 🛠️ Tecnologías utilizadas
+## 🛠️ Requisitos
 
-- ASP.NET 8
-- C#
+- .NET SDK 8.0+
+- Python 3.x
+- Git
 - SQLite
 - Swagger
 - HTML, CSS, JavaScript
@@ -42,17 +43,6 @@ cd Drones-y-Medicamentos-ASP.NET
 ```
 
 ⚙️ 2. Ejecutar el backend (API REST)
-Requisitos
-
-Tener instalado .NET SDK 8
-
-Puedes comprobarlo con:
-
-```bash
-dotnet --version
-```
-
-Ejecutar la API
 
 Desde la raíz del proyecto:
 
@@ -61,29 +51,28 @@ cd backend/API_REST_Drones_y_Medicamentos
 dotnet restore
 dotnet run
 ```
-
-✅ Al arrancar:
-
- - La API se inicia
- - Se crea automáticamente la base de datos SQLite si no existe
- - Se crean las tablas necesarias
-
-La API expone Swagger automáticamente.
-
-Accede desde el navegador a:
+Al iniciarse, la consola mostrará algo como:
 
 ```bash
-https://localhost:xxxx/swagger
+Now listening on: http://localhost:5212
 ```
 
-🌐 3. Ejecutar el frontend
+🌐 3. Ejecutar el frontend (OBLIGATORIO)
 
-El frontend no necesita servidor.
-
-Simplemente abre en el navegador:
+⚠️ NO abrir index.html con doble click
+⚠️ NO usar file://
 
 ```bash
-Interfaz/index.html
+cd frontend
+python -m http.server 5500
+```
+
+🌍 5. Abrir la aplicación
+
+En el navegador:
+
+```bash
+http://localhost:5500
 ```
 
 El frontend se comunica directamente con la API REST.
