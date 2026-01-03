@@ -81,3 +81,23 @@ https://localhost:xxxx/swagger
 El frontend no necesita servidor.
 
 Simplemente abre en el navegador:
+
+```bash
+Interfaz/index.html
+```
+
+El frontend se comunica directamente con la API REST.
+
+🧠 Funcionamiento de la base de datos
+
+ - La base de datos es SQLite
+ - Se crea automáticamente al iniciar la API
+ - No se incluye ninguna base de datos real en el repositorio
+ - La carpeta database/ se genera en tiempo de ejecución
+
+🔐 Buenas prácticas del proyecto
+
+ - No se suben archivos de compilación (bin, obj)
+ - No se suben bases de datos reales
+ - No se suben configuraciones de desarrollo
+ - Proyecto listo para clonar y ejecutar
