@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <!-- ================================================= -->
+    <!-- ==================== META ====================== -->
+    <!-- ================================================= -->
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- ================================================= -->
+    <!-- ================= TITLE / ICON ================= -->
+    <!-- ================================================= -->
+    <title>Gestión de Drones</title>
+    <link rel="icon" type="image/ico" href="imagenes/drone_logo.ico" />
+
+    <!-- ================================================= -->
+    <!-- ==================== STYLES ==================== -->
+    <!-- ================================================= -->
+    <link rel="stylesheet" href="styles.css" />
+
+    <!-- ================================================= -->
+    <!-- =================== LIBRARIES ================== -->
+    <!-- ================================================= -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      crossorigin="anonymous"
+    />
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+      crossorigin="anonymous"
+    ></script>
+  </head>
+
+  <body>
+    <!-- ================================================= -->
+    <!-- ==================== HEADER ==================== -->
+    <!-- ================================================= -->
+    <header>
+      <h1>Gestión de Drones</h1>
+
+      <!-- =============== NAVIGATION ================= -->
+      <nav>
+        <button class="nav-btn" onclick="showSection('register')">
+          Registrar dron
+        </button>
+
+        <button class="nav-btn" onclick="showSection('list')">
+          Listado de drones
+        </button>
+
+        <button class="nav-btn" onclick="showSection('register-medicament')">
+          Registrar medicamentos
+        </button>
+
+        <button class="nav-btn" onclick="showSection('medicaments')">
+          Listado de medicamentos
+        </button>
+      </nav>
+    </header>
+
+    <!-- ================================================= -->
+    <!-- ===================== MAIN ===================== -->
+    <!-- ================================================= -->
+    <main>
+      <!-- =============================================== -->
+      <!-- ============ REGISTRO DE DRONES =============== -->
+      <!-- =============================================== -->
+      <section id="register-section" class="page-section">
+        <h2>Registrar Drone</h2>
+
+        <div class="form-group">
+          <label for="serial">Número de serie</label>
+          <input type="text" id="serial" placeholder="Ej: DR010" />
+        </div>
+
+        <div class="form-group">
+          <label for="model">Modelo</label>
+          <select id="model">
+            <option value="Ligero">Ligero</option>
+            <option value="Medio">Medio</option>
+            <option value="Crucero">Crucero</option>
+            <option value="Pesado">Pesado</option>
+          </select>
+        </div>
+
+        <button id="register-btn">Registrar</button>
+      </section>
+
+      <!-- =============================================== -->
+      <!-- ============ LISTADO DE DRONES ================ -->
+      <!-- =============================================== -->
+      <section id="list-section" class="page-section hidden">
+        <div class="filter-buttons">
+          <button class="filter-btn active" id="filter-btn-all">Todos</button>
+          <button class="filter-btn" id="filter-btn-disponibles">
+            Disponibles
+          </button>
+        </div>
+
+        <section id="drone-list">
+          <!-- JS insertará aquí las tarjetas de drones -->
+        </section>
+      </section>
+
+      <!-- =============================================== -->
+      <!-- ======== REGISTRO DE MEDICAMENTOS ============= -->
+      <!-- =============================================== -->
+      <section id="register-medicament-section" class="page-section hidden">
+        <h2>Registrar Medicamento</h2>
+
+        <div class="form-group">
+          <label for="med-code">Código</label>
+          <input type="text" id="med-code" placeholder="Ej: MED001" />
+        </div>
+
+        <div class="form-group">
+          <label for="med-name">Nombre</label>
+          <input type="text" id="med-name" placeholder="Ej: Paracetamol" />
+        </div>
+
+        <div class="form-group">
+          <label for="med-weight">Peso (g) (Min: 1 · Max: 1000)</label>
+          <input
+            type="text"
+            id="med-weight"
+            placeholder="Ej: 250"
+            inputmode="numeric"
+            pattern="[0-9]*"
+          />
+        </div>
+
+        <button id="register-medicament-btn">Registrar medicamento</button>
+      </section>
+
+      <!-- =============================================== -->
+      <!-- ========= LISTADO DE MEDICAMENTOS ============= -->
+      <!-- =============================================== -->
+      <section id="medicaments-section" class="page-section hidden">
+        <div class="filter-buttons">
+          <button class="filter-btn active" data-filter="all">Todos</button>
+          <button class="filter-btn" data-filter="in-use">En uso</button>
+          <button class="filter-btn" data-filter="available">
+            Disponibles
+          </button>
+        </div>
+
+        <section id="medicament-list">
+          <!-- JS insertará aquí los medicamentos -->
+        </section>
+      </section>
+    </main>
+
+    <!-- ================================================= -->
+    <!-- ==================== SCRIPTS =================== -->
+    <!-- ================================================= -->
+    <script src="script.js"></script>
+  </body>
+</html>

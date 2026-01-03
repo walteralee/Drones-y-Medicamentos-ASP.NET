@@ -1,0 +1,552 @@
+/* ================================================= */
+/* =================== BASE / RESET ================= */
+/* ================================================= */
+
+:root {
+  --primary: #0b5ed7;
+  --primary-light: #e7f1ff;
+  --accent: #5dade2;
+  --background: #f5f7fa;
+  --text-dark: #212529;
+  --text-muted: #495057;
+  --white: #ffffff;
+  --radius-lg: 16px;
+  --radius-md: 10px;
+  --shadow-soft: 0 8px 25px rgba(0, 0, 0, 0.08);
+  --shadow-hover: 0 12px 35px rgba(0, 0, 0, 0.12);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont,
+    "Helvetica Neue", Arial, sans-serif;
+  background: var(--background);
+  color: var(--text-dark);
+}
+
+.hidden {
+  display: none;
+}
+
+/* ================================================= */
+/* ================= HEADER & NAV ================== */
+/* ================================================= */
+
+header {
+  background: linear-gradient(180deg, #0b5ed7 0%, #084298 100%);
+  color: var(--white);
+  padding: 2.2rem 1rem 2.6rem;
+  text-align: center;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+header h1 {
+  margin: 0;
+  font-weight: 700;
+  font-size: 2rem;
+  letter-spacing: 0.4px;
+}
+
+/* ================= NAV ================= */
+
+nav {
+  margin-top: 1.8rem;
+  display: flex;
+  justify-content: center;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+}
+
+/* Botones LIMPIOS y SERIOS */
+.nav-btn {
+  background: #f8f9fa;
+  color: #0b5ed7;
+
+  border: none;
+  border-radius: 999px;
+
+  padding: 0.55rem 1.6rem;
+  cursor: pointer;
+
+  font-weight: 600;
+  font-size: 0.95rem;
+
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Hover elegante (sin exagerar) */
+.nav-btn:hover {
+  background: #e7f1ff;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+}
+
+/* Estado activo (opcional si lo usas) */
+.nav-btn.active {
+  background: #ffffff;
+  color: #084298;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.25);
+}
+
+/* ================================================= */
+/* ================== SECTIONS ===================== */
+/* ================================================= */
+
+.page-section {
+  padding: 2.5rem 1rem;
+}
+
+/* ================================================= */
+/* ================== FORMS ======================== */
+/* ================================================= */
+
+.form-group {
+  margin-bottom: 1.4rem;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 0.4rem;
+  font-size: 0.95rem;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--radius-md);
+  border: 1px solid #ced4da;
+  font-size: 0.95rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(11, 94, 215, 0.15);
+  background: var(--white);
+}
+/* ================================================= */
+/* ============== REGISTRO DRONES ================== */
+/* ================================================= */
+
+#register-section {
+  background: var(--primary-light);
+  margin: 2rem auto;
+  padding: 2rem 2.2rem;
+  border-radius: var(--radius-lg);
+  max-width: 620px;
+  box-shadow: var(--shadow-soft);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+#register-section:hover {
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-2px);
+}
+
+#register-section h2 {
+  margin-bottom: 1.6rem;
+  color: var(--primary);
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.4px;
+}
+
+/* Botón principal */
+#register-btn {
+  display: inline-block;
+  margin-top: 1rem;
+  background: linear-gradient(135deg, #0b5ed7, #0a58ca);
+  color: var(--white);
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: 0.3px;
+  box-shadow: 0 6px 18px rgba(11, 94, 215, 0.35);
+  transition: all 0.25s ease;
+}
+
+#register-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(11, 94, 215, 0.45);
+}
+
+#register-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 12px rgba(11, 94, 215, 0.35);
+}
+/* ================================================= */
+/* ============== FILTER BUTTONS =================== */
+/* ================================================= */
+
+.filter-buttons,
+#filters {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 1.2rem;
+}
+
+/* Botón base */
+.filter-btn {
+  background: var(--primary-soft);
+  border: none;
+  border-radius: 999px;
+  padding: 0.55rem 1.6rem;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--primary-dark);
+  letter-spacing: 0.3px;
+  transition: all 0.25s ease;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Hover (solo si no está activo) */
+.filter-btn:not(.active):hover {
+  background: var(--primary-light);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+}
+
+/* Estado activo */
+.filter-btn.active {
+  background: linear-gradient(135deg, #0b5ed7, #0a58ca);
+  color: var(--white);
+  box-shadow: 0 6px 20px rgba(11, 94, 215, 0.45);
+  transform: translateY(-1px);
+}
+
+/* Click */
+.filter-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 12px rgba(11, 94, 215, 0.35);
+}
+
+/* ================================================= */
+/* ================= DRONE LIST ==================== */
+/* ================================================= */
+
+#drone-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 2rem;
+}
+
+.drone-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 10px;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.drone-card img {
+  width: 100px;
+}
+
+.drone-info {
+  flex-grow: 1;
+}
+
+/* ================================================= */
+/* ================= DRONE BUTTONS ================= */
+/* ================================================= */
+
+.load-btn,
+.show-medicaments,
+.start,
+.low-battery {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.load-btn {
+  background: #0096c7;
+}
+
+.show-medicaments {
+  background: #0a790e;
+}
+
+.start {
+  background: #7b1f03;
+}
+
+.low-battery {
+  background: #a48405;
+}
+
+.load-btn:disabled,
+.start:disabled,
+.low-battery:disabled {
+  background: #aaa;
+  cursor: not-allowed;
+}
+
+/* ================================================= */
+/* ============== MEDICAMENT FORM ================== */
+/* ================================================= */
+
+#load-form {
+  margin-top: 1.2rem;
+  padding: 1.4rem 1.6rem;
+  border-radius: var(--radius-md);
+  background: var(--primary-light);
+  box-shadow: var(--shadow-soft);
+  animation: fadeIn 0.25s ease;
+}
+
+/* Título del formulario (si lo hay) */
+#load-form h4 {
+  margin: 0 0 1rem;
+  color: var(--primary);
+  font-weight: 600;
+  text-align: center;
+}
+
+/* Input */
+#load-form input {
+  display: block;
+  width: 100%;
+  margin: 0.8rem 0 1.2rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: var(--radius-md);
+  border: 1px solid #ced4da;
+  font-size: 0.9rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#load-form input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(11, 94, 215, 0.15);
+  background: var(--white);
+}
+
+/* Contenedor de botones */
+#load-form button {
+  padding: 0.5rem 1.4rem;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  transition: all 0.2s ease;
+}
+
+/* Botón añadir */
+#add-med-btn {
+  background: linear-gradient(135deg, #38b000, #0a790e);
+  color: var(--white);
+  box-shadow: 0 4px 12px rgba(56, 176, 0, 0.35);
+}
+
+#add-med-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(56, 176, 0, 0.45);
+}
+
+/* Botón cancelar */
+#cancel-btn {
+  background: linear-gradient(135deg, #e63946, #d00000);
+  color: var(--white);
+  margin-left: 0.6rem;
+  box-shadow: 0 4px 12px rgba(208, 0, 0, 0.35);
+}
+
+#cancel-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(208, 0, 0, 0.45);
+}
+
+/* ================= ANIMATION ================= */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+/* ================================================= */
+/* ========== REGISTRO MEDICAMENTOS ================ */
+/* ================================================= */
+
+#register-medicament-section {
+  background: var(--primary-light);
+  margin: 2rem auto;
+  padding: 2rem 2.2rem;
+  border-radius: var(--radius-lg);
+  max-width: 620px;
+  box-shadow: var(--shadow-soft);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+/* Hover elegante de la tarjeta */
+#register-medicament-section:hover {
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-2px);
+}
+
+/* Título */
+#register-medicament-section h2 {
+  margin-bottom: 1.6rem;
+  color: var(--primary);
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.4px;
+}
+
+/* Botón principal */
+#register-medicament-btn {
+  display: inline-block;
+  margin-top: 1rem;
+  background: linear-gradient(135deg, #0b5ed7, #0a58ca);
+  color: var(--white);
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: 0.3px;
+  box-shadow: 0 6px 18px rgba(11, 94, 215, 0.35);
+  transition: all 0.25s ease;
+}
+
+/* Hover */
+#register-medicament-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(11, 94, 215, 0.45);
+}
+
+/* Active (click) */
+#register-medicament-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 12px rgba(11, 94, 215, 0.35);
+}
+/* ================================================= */
+/* =========== MEDICAMENT LIST ===================== */
+/* ================================================= */
+
+#medicament-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+  padding: 2rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* Tarjeta medicamento */
+.medicament-card {
+  display: flex;
+  align-items: center;
+  gap: 1.4rem;
+  background: var(--white);
+  padding: 1.2rem 1.5rem;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-soft);
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Hover elegante */
+.medicament-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+}
+
+/* Línea decorativa lateral */
+.medicament-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 5px;
+  height: 100%;
+  background: linear-gradient(180deg, #0b5ed7, #4dabf7);
+}
+
+/* Icono medicamento */
+.medicament-card img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  background: #f1f5fb;
+  padding: 0.5rem;
+  border-radius: 50%;
+}
+
+/* Información */
+.medicament-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.medicament-info p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #444;
+}
+
+/* Campos destacados */
+.medicament-info p strong {
+  color: #0b5ed7;
+  font-weight: 600;
+}
+
+/* Estado vacío */
+#medicament-list p em {
+  display: block;
+  text-align: center;
+  font-size: 1rem;
+  color: #777;
+  padding: 2rem 0;
+}
+
+/* ================================================= */
+/* ================= RESPONSIVE ==================== */
+/* ================================================= */
+
+@media (max-width: 600px) {
+  nav {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .nav-btn {
+    width: 90%;
+    max-width: 300px;
+    margin: 0.3rem 0;
+  }
+}
