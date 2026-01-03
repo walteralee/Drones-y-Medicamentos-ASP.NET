@@ -6,13 +6,6 @@ El proyecto está preparado para que **cualquier usuario pueda clonarlo y ejecut
 
 ---
 
-## 📁 Estructura del proyecto
-
-Drones-y-Medicamentos-ASP.NET/
-├── backend/ → API REST en ASP.NET 8
-└── frontend/ → Frontend web (HTML / CSS / JS)
-
-
 > ⚠️ La carpeta `database/` **NO se incluye en el repositorio**.  
 > Se genera automáticamente al iniciar el backend.
 
@@ -74,19 +67,3 @@ En el navegador:
 ```bash
 http://localhost:5500
 ```
-
-El frontend se comunica directamente con la API REST.
-
-🧠 Funcionamiento de la base de datos
-
- - La base de datos es SQLite
- - Se crea automáticamente al iniciar la API
- - No se incluye ninguna base de datos real en el repositorio
- - La carpeta database/ se genera en tiempo de ejecución
-
-🔐 Buenas prácticas del proyecto
-
- - No se suben archivos de compilación (bin, obj)
- - No se suben bases de datos reales
- - No se suben configuraciones de desarrollo
- - Proyecto listo para clonar y ejecutar
