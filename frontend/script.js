@@ -7,7 +7,7 @@ const registerMedicamentBtn = document.getElementById(
 const cargasBateriaActivas = {};
 
 // URL base de tu API
-const API_BASE = "https://localhost:7104/api/drones";
+const API_BASE = "http://localhost:5212/api/drones";
 
 // ✅ Cambiar de sección
 function showSection(section) {
@@ -299,7 +299,7 @@ function renderDrones() {
 //------------------------------------------------------- LISTAR MEDICAMENTOS ----------------------------------------------------------------------
 
 const medicamentList = document.getElementById("medicament-list");
-const API_MEDICAMENTOS = "https://localhost:7104/api/Drones/medicamentos";
+const API_MEDICAMENTOS = "http://localhost:5212/api/Drones/medicamentos";
 
 // Se ejecuta al pulsar el botón del menú
 async function cargarMedicamentos(estado = "all") {
@@ -430,7 +430,7 @@ function showLoadForm(card, drone) {
 async function confirmarMedicamento(codigo) {
   try {
     const response = await fetch(
-      `https://localhost:7104/api/drones/confirmar_existencia_de_medicamento/${codigo}`
+      `http://localhost:5212/api/drones/confirmar_existencia_de_medicamento/${codigo}`
     );
 
     if (!response.ok) {
@@ -496,7 +496,7 @@ async function comprobarLimitePeso(card, codigo) {
 async function insertarDronMedicamento(nserie_dron, codigo_medicamento) {
   try {
     const response = await fetch(
-      "https://localhost:7104/api/drones/insertar-medicamento-dron",
+      "http://localhost:5212/api/drones/insertar-medicamento-dron",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -576,7 +576,7 @@ async function cargarMedicamentosParaDrone(card, numeroSerie) {
 async function modificarEstadoDron(nserie_dron, estado) {
   try {
     const response = await fetch(
-      `https://localhost:7104/api/drones/actualizar_estado_dron?numero_serie=${encodeURIComponent(
+      `http://localhost:5212/api/drones/actualizar_estado_dron?numero_serie=${encodeURIComponent(
         nserie_dron
       )}&estado=${encodeURIComponent(estado)}`,
       { method: "POST" }
@@ -641,7 +641,7 @@ async function procesoDeEntrega(dron, intervalo = 3000) {
 async function vaciarDron(drone) {
   try {
     const response = await fetch(
-      `https://localhost:7104/api/drones/eliminar_relaciones_y_medicamentos/${encodeURIComponent(
+      `http://localhost:5212/api/drones/eliminar_relaciones_y_medicamentos/${encodeURIComponent(
         drone.serialNumber
       )}`,
       { method: "DELETE" }
@@ -725,3 +725,4 @@ cargarTodos();
 
 // 🔋 Iniciar consumo global de batería
 reducir_bateria_todos_los_drones();
+
