@@ -75,3 +75,9 @@ Accede desde el navegador a:
 ```bash
 https://localhost:xxxx/swagger
 ```
+
+🌐 3. Ejecutar el frontend
+
+El frontend no necesita servidor.
+
+Simplemente abre en el navegador:
