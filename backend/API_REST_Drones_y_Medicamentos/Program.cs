@@ -2,7 +2,15 @@ using System.Diagnostics;
 using API_REST_Drones_y_Medicamentos.Data;
 using Microsoft.Extensions.FileProviders;
 
-var builder = WebApplication.CreateBuilder(args);
+// En la versión publicada (.exe o Docker) la web va en wwwroot junto al programa: entonces la carpeta
+// de trabajo es la del programa, aunque se abra desde un acceso directo o desde otra carpeta
+var esVersionPublicada = File.Exists(Path.Combine(AppContext.BaseDirectory, "wwwroot", "index.html"));
+
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    ContentRootPath = esVersionPublicada ? AppContext.BaseDirectory : null
+});
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
