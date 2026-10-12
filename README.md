@@ -115,17 +115,12 @@ Todas las rutas empiezan por `/api/drones`. Puedes probarlas en **http://localho
 
 Solo si quieres ver o modificar el código. Necesitas el [SDK de .NET 8](https://dotnet.microsoft.com/download/dotnet/8.0) (o superior).
 
-```bash
-cd backend/API_REST_Drones_y_Medicamentos
-```
+- **Windows:** doble clic en **`run.bat`**.
+- **Mac / Linux:** `./run.sh`
 
-```bash
-dotnet run
-```
+Compila, arranca y abre el navegador en **http://localhost:5212** con la web y la API juntas. También puedes abrir `DronesYMedicamentos.sln` con Visual Studio o Rider y pulsar ▶.
 
-Se abre el navegador en **http://localhost:5212** con la web y la API juntas. También puedes abrir `backend/API_REST_Drones_y_Medicamentos.sln` con Visual Studio y pulsar ▶.
-
-**Tests** (desde la carpeta `backend`):
+**Tests** (desde la raíz):
 
 ```bash
 dotnet test
@@ -137,22 +132,52 @@ dotnet test
 powershell -ExecutionPolicy Bypass -File scripts/publicar-windows.ps1
 ```
 
+## Arquitectura
+
+El backend es una API REST **por capas**: cada capa solo habla con la de debajo.
+
+```text
+Petición HTTP
+   │
+   ▼
+Controladores   reciben la petición y responden (sin reglas)
+   │
+   ▼
+Servicios       reglas de negocio: modelos, estados, batería, límite de peso
+   │
+   ▼
+Repositorios    consultas SQL a SQLite (detrás de una interfaz)
+   │
+   ▼
+Datos           conexión y creación de la base de datos
+```
+
+Los errores de negocio se lanzan como excepciones (`ErrorDeNegocio` → 400, `NoEncontrado` → 404) y un único `ManejadorErrores` los convierte en JSON `{ "message": "..." }`. El frontend sigue la misma idea: `api.js` solo hace peticiones y `app.js` solo maneja la pantalla.
+
 ## Estructura
 
 ```text
-backend/
-├── API_REST_Drones_y_Medicamentos/
-│   ├── Controllers/DronesController.cs   endpoints y reglas (peso, batería, estado)
-│   ├── Data/DatabaseInitializer.cs       crea la base de datos y las tablas
-│   ├── Model/                            Drone, Medicamento y RelacionDM
-│   └── Program.cs                        arranque: API, web, Swagger y navegador
-└── API_REST_Drones_y_Medicamentos.Tests/ tests de integración de la API
-frontend/                                 web: index.html, styles.css, script.js
-scripts/publicar-windows.ps1              genera el ZIP de Windows
-Dockerfile · docker-compose.yml           versión con Docker
+DronesYMedicamentos.sln     solución (.NET)
+run.bat · run.sh            arrancar desde el código
+backend/                    API REST en ASP.NET 8
+├── Controladores/          DronesController: endpoints HTTP
+├── Servicios/              DronServicio y MedicamentoServicio: reglas de negocio
+├── Repositorios/           acceso a SQLite (interfaces + implementación)
+├── Datos/                  conexión y creación de la base de datos
+├── Modelos/                Drone, Medicamento, CargaMedicamento y ReglasDron
+├── Errores/                errores de negocio y manejador global
+└── Program.cs              arranque: capas, Swagger, web y navegador
+frontend/                   web
+├── index.html
+├── css/estilos.css
+├── js/api.js               peticiones a la API
+├── js/app.js               interfaz
+└── imagenes/
+tests/                      tests de integración de la API (xUnit)
+scripts/                    publicar-windows.ps1: genera el ZIP de Windows
+datos/                      base de datos SQLite (se crea sola, no se sube a Git)
+Dockerfile · docker-compose.yml
 ```
-
-La base de datos se crea sola al arrancar en `database/drones_y_medicamentos.db` y no se sube al repositorio.
 
 ## Autor
 
@@ -169,5 +194,5 @@ La base de datos se crea sola al arrancar en `database/drones_y_medicamentos.db`
 - **Windows (nothing to install):** download **[DronesYMedicamentos-Windows.zip](https://github.com/walteralee/Drones-y-Medicamentos-ASP.NET/releases/latest/download/DronesYMedicamentos-Windows.zip)**, unzip it and double-click `DronesYMedicamentos.exe`. The browser opens by itself.
 - **Mac / Linux (Docker):** `git clone` the repo, then run `docker compose up -d` and open http://localhost:5212.
 
-**From source:** `cd backend/API_REST_Drones_y_Medicamentos` and `dotnet run` (.NET 8 SDK). API docs at `/swagger`.
+**From source:** run `run.bat` (Windows) or `./run.sh` (Mac/Linux) with the .NET 8 SDK. Layered architecture: controllers → services → repositories → SQLite. API docs at `/swagger`.
 **Author:** Walter Alejandro Cutiño Ledo · [github.com/walteralee](https://github.com/walteralee)
