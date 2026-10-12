@@ -22,7 +22,8 @@ builder.Services.AddScoped<IMedicamentoRepositorio, MedicamentoRepositorio>();
 builder.Services.AddScoped<DronServicio>();
 builder.Services.AddScoped<MedicamentoServicio>();
 
-builder.Services.AddControllers();
+// Errores: los esperados (400, 404) los resuelve el filtro y los inesperados (500) el manejador global
+builder.Services.AddControllers(opciones => opciones.Filters.Add<FiltroErroresDeNegocio>());
 builder.Services.AddExceptionHandler<ManejadorErrores>();
 builder.Services.AddProblemDetails();
 builder.Services.AddEndpointsApiExplorer();
