@@ -1,5 +1,8 @@
 using System.Diagnostics;
-using API_REST_Drones_y_Medicamentos.Data;
+using DronesYMedicamentos.Api.Datos;
+using DronesYMedicamentos.Api.Errores;
+using DronesYMedicamentos.Api.Repositorios;
+using DronesYMedicamentos.Api.Servicios;
 using Microsoft.Extensions.FileProviders;
 
 // En la versión publicada (.exe o Docker) la web va en wwwroot junto al programa: entonces la carpeta
@@ -12,7 +15,16 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
     ContentRootPath = esVersionPublicada ? AppContext.BaseDirectory : null
 });
 
+// Capas: Controladores -> Servicios -> Repositorios -> Datos (SQLite)
+builder.Services.AddSingleton<ConexionSqlite>();
+builder.Services.AddScoped<IDronRepositorio, DronRepositorio>();
+builder.Services.AddScoped<IMedicamentoRepositorio, MedicamentoRepositorio>();
+builder.Services.AddScoped<DronServicio>();
+builder.Services.AddScoped<MedicamentoServicio>();
+
 builder.Services.AddControllers();
+builder.Services.AddExceptionHandler<ManejadorErrores>();
+builder.Services.AddProblemDetails();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -25,7 +37,9 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // Crea la base de datos y las tablas si no existen
-DatabaseInitializer.Initialize(DatabaseInitializer.ConnectionString(app.Configuration, app.Environment));
+InicializadorBaseDatos.Crear(app.Services.GetRequiredService<ConexionSqlite>());
+
+app.UseExceptionHandler();
 
 // Swagger siempre disponible en /swagger para probar la API
 app.UseSwagger();
@@ -33,11 +47,11 @@ app.UseSwaggerUI();
 
 app.UseCors("PermitirTodo");
 
-// La web (frontend) la sirve la propia API: en la versión publicada está en wwwroot y,
-// al ejecutar desde el código, se usa directamente la carpeta frontend del repositorio
-var carpetaWeb = Directory.Exists(Path.Combine(app.Environment.ContentRootPath, "wwwroot"))
+// La web la sirve la propia API: en la versión publicada está en wwwroot y,
+// al ejecutar desde el código, se usa la carpeta frontend de la raíz del repositorio
+var carpetaWeb = esVersionPublicada
     ? Path.Combine(app.Environment.ContentRootPath, "wwwroot")
-    : Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "..", "frontend"));
+    : Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "frontend"));
 
 if (Directory.Exists(carpetaWeb))
 {

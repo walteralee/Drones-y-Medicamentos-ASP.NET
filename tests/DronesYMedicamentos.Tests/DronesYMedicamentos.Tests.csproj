@@ -4,6 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <RootNamespace>DronesYMedicamentos.Tests</RootNamespace>
 
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
@@ -22,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\API_REST_Drones_y_Medicamentos\API_REST_Drones_y_Medicamentos.csproj" />
+    <ProjectReference Include="..\..\backend\DronesYMedicamentos.Api.csproj" />
   </ItemGroup>
 
 </Project>

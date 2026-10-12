@@ -1,9 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
-using API_REST_Drones_y_Medicamentos.Model;
+using DronesYMedicamentos.Api.Modelos;
 using Microsoft.AspNetCore.Mvc.Testing;
 
-namespace API_REST_Drones_y_Medicamentos.Tests;
+namespace DronesYMedicamentos.Tests;
 
 // Tests de integración: arrancan la API de verdad con una base de datos SQLite temporal y vacía
 public class DronesApiTests : IDisposable
