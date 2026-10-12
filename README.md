@@ -32,7 +32,7 @@
 
 > No necesitas instalar .NET ni nada más: todo va dentro. Para cerrarla, cierra la ventana negra.
 > Si Windows muestra *"Windows protegió su PC"*, pulsa **Más información > Ejecutar de todas formas** (sale porque el programa no está firmado).
-> Para desinstalarlo, borra la carpeta.
+> Para desinstalarlo, borra la carpeta: no instala nada ni deja archivos en ningún otro sitio del equipo.
 
 ### Mac y Linux (o Windows con Docker)
 
