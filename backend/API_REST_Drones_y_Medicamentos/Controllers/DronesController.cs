@@ -1,627 +1,430 @@
-﻿using API_REST_Drones_y_Medicamentos.Model;
+using API_REST_Drones_y_Medicamentos.Model;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
-using System.Collections.Generic;
-using System.Text;
-using Microsoft.Extensions.Configuration;
 
-
-namespace TuProyecto.Controllers
+namespace API_REST_Drones_y_Medicamentos.Controllers
 {
+    // API de drones y medicamentos. Todas las rutas empiezan por /api/drones
     [ApiController]
     [Route("api/[controller]")]
     public class DronesController : ControllerBase
     {
+        // Peso máximo (g) de cada modelo de dron
+        private static readonly Dictionary<string, int> LimitePorModelo = new()
+        {
+            ["Ligero"] = 250,
+            ["Medio"] = 500,
+            ["Crucero"] = 750,
+            ["Pesado"] = 1000
+        };
+
+        private static readonly string[] EstadosValidos =
+            { "IDLE", "LOADING", "LOADED", "DELIVERING", "DELIVERED", "RETURNING" };
+
+        // Por debajo de esta batería (%) un dron no puede cargar medicamentos
+        private const int BateriaMinimaParaCargar = 25;
+
+        private const string ColumnasDron = "id, serial_number, model, weight_limit, battery, state";
+
         private readonly string _connectionString;
 
         public DronesController(IConfiguration configuration)
         {
-            _connectionString = configuration.GetConnectionString("Sqlite");
+            var connectionString = configuration.GetConnectionString("Sqlite");
 
-            if (string.IsNullOrWhiteSpace(_connectionString))
+            if (string.IsNullOrWhiteSpace(connectionString))
             {
-                throw new Exception("Connection string 'Sqlite' no encontrada");
+                throw new InvalidOperationException("Connection string 'Sqlite' no encontrada");
             }
+
+            // Activamos las claves foráneas, que en SQLite vienen desactivadas por defecto
+            _connectionString = new SqliteConnectionStringBuilder(connectionString) { ForeignKeys = true }.ToString();
         }
 
-        // ✅ POST: api/drones/registrar
+        //------------------------------------------------------------------------------------------------
+        // DRONES
+
+        // POST: api/drones/registrar
+        // El límite de peso sale del modelo y todo dron nuevo empieza con la batería al 100% y en IDLE
         [HttpPost("registrar")]
-        public IActionResult RegistrarDrone([FromBody] Drone drone)
+        public IActionResult RegistrarDrone([FromBody] Drone? drone)
         {
             if (drone == null)
                 return BadRequest(new { message = "El dron no puede ser nulo." });
 
-            using (var connection = new SqliteConnection(_connectionString))
+            if (string.IsNullOrWhiteSpace(drone.SerialNumber))
+                return BadRequest(new { message = "El número de serie es obligatorio." });
+
+            if (!LimitePorModelo.TryGetValue(drone.Model, out var limite))
+                return BadRequest(new { message = "Modelo no válido. Usa: Ligero, Medio, Crucero o Pesado." });
+
+            using var connection = AbrirConexion();
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+                INSERT INTO drones (serial_number, model, weight_limit, battery, state)
+                VALUES ($serial, $model, $weight, 100, 'IDLE');";
+
+            command.Parameters.AddWithValue("$serial", drone.SerialNumber.Trim());
+            command.Parameters.AddWithValue("$model", drone.Model);
+            command.Parameters.AddWithValue("$weight", limite);
+
+            try
             {
-                connection.Open();
-
-                var command = connection.CreateCommand();
-                command.CommandText = @"
-                    INSERT INTO drones (serial_number, model, weight_limit, battery, state) 
-                    VALUES ($serial, $model, $weight, $battery, $state);
-                ";
-
-                command.Parameters.AddWithValue("$serial", drone.SerialNumber);
-                command.Parameters.AddWithValue("$model", drone.Model);
-                command.Parameters.AddWithValue("$weight", drone.WeightLimit);
-                command.Parameters.AddWithValue("$battery", drone.Battery);
-                command.Parameters.AddWithValue("$state", drone.State);
-
-                try
-                {
-                    command.ExecuteNonQuery();
-                }
-                catch (SqliteException ex)
-                {
-                    return BadRequest(new { message = $"Error al insertar el dron: {ex.Message}" });
-                }
+                command.ExecuteNonQuery();
+            }
+            catch (SqliteException ex) when (ex.SqliteErrorCode == 19) // SQLITE_CONSTRAINT
+            {
+                return BadRequest(new { message = "Ya existe un dron con ese número de serie." });
             }
 
             return Ok(new { message = "Dron registrado con éxito." });
         }
 
-        // ✅ GET: api/drones/todos
+        // GET: api/drones/todos
         [HttpGet("todos")]
         public IActionResult ObtenerTodosLosDrones()
         {
-            var drones = new List<Drone>();
-
-            using (var connection = new SqliteConnection(_connectionString))
-            {
-                connection.Open();
-
-                var command = connection.CreateCommand();
-                command.CommandText = "SELECT id, serial_number, model, weight_limit, battery, state FROM drones;";
-
-                using (var reader = command.ExecuteReader())
-                {
-                    while (reader.Read())
-                    {
-                        drones.Add(new Drone
-                        {
-                            Id = reader.GetInt32(0),
-                            SerialNumber = reader.GetString(1),
-                            Model = reader.GetString(2),
-                            WeightLimit = reader.GetInt32(3),
-                            Battery = reader.GetInt32(4),
-                            State = reader.GetString(5)
-                        });
-                    }
-                }
-            }
-
-            return Ok(drones);
+            return Ok(LeerDrones($"SELECT {ColumnasDron} FROM drones;"));
         }
 
-        // ✅ GET: api/drones/disponibles
+        // GET: api/drones/disponibles -> drones en IDLE con más del 25% de batería
         [HttpGet("disponibles")]
         public IActionResult ObtenerDronesDisponibles()
         {
-            var drones = new List<Drone>();
-
-            using (var connection = new SqliteConnection(_connectionString))
-            {
-                connection.Open();
-
-                var command = connection.CreateCommand();
-                command.CommandText = "SELECT id, serial_number, model, weight_limit, battery, state FROM drones WHERE battery > 25 AND state = 'IDLE';";
-
-                using (var reader = command.ExecuteReader())
-                {
-                    while (reader.Read())
-                    {
-                        drones.Add(new Drone
-                        {
-                            Id = reader.GetInt32(0),
-                            SerialNumber = reader.GetString(1),
-                            Model = reader.GetString(2),
-                            WeightLimit = reader.GetInt32(3),
-                            Battery = reader.GetInt32(4),
-                            State = reader.GetString(5)
-                        });
-                    }
-                }
-            }
-
-            return Ok(drones);
+            return Ok(LeerDrones(
+                $"SELECT {ColumnasDron} FROM drones WHERE battery > {BateriaMinimaParaCargar} AND state = 'IDLE';"));
         }
 
-        [HttpPost("insertar_medicamento")]
-        public IActionResult InsertarMedicamento([FromBody] Medicamento medicamento)
-        {
-            if (medicamento == null)
-            {
-                return BadRequest(new { message = "El medicamento no puede ser nulo." });
-            }
-
-            using (var connection = new SqliteConnection(_connectionString))
-            {
-                connection.Open();
-
-                var command = connection.CreateCommand();
-                command.CommandText = @"INSERT INTO medicamentos (Codigo, Nombre, Peso) VALUES ($codigo, $nombre, $peso);";
-
-                command.Parameters.AddWithValue("$codigo", medicamento.codigo);
-                command.Parameters.AddWithValue("$nombre", medicamento.nombre);
-                command.Parameters.AddWithValue("$peso", medicamento.peso);
-
-                try
-                {
-                    command.ExecuteNonQuery();
-                }
-                catch (SqliteException ex)
-                {
-                    return BadRequest(new { message = $"Error al insertar el medicamento: {ex.Message}" });
-                }
-            }
-
-            return Ok(new { message = "💊 Medicamento registrado con éxito." });
-        }
-
-        [HttpGet("confirmar_existencia_de_medicamento/{codigo}")]
-        public IActionResult ConfirmarMedicamento(string codigo)
-        {
-            bool existe = false;
-
-            using (var connection = new SqliteConnection(_connectionString))
-            {
-                connection.Open();
-
-                var command = connection.CreateCommand();
-                command.CommandText = "SELECT 1 FROM medicamentos WHERE Codigo = $codigo LIMIT 1;";
-                command.Parameters.AddWithValue("$codigo", codigo);
-
-                var result = command.ExecuteScalar();
-                existe = (result != null);
-            }
-
-            return Ok(existe);
-        }
-
-
-        [HttpPost("insertar-medicamento-dron")]
-        public IActionResult InsertarMedicamentoEnDron([FromBody] RelacionDM relacion)
-        {
-            if (relacion == null)
-            {
-                return BadRequest(new { message = "La relación no puede ser nula." });
-            }
-
-            using (var connection = new SqliteConnection(_connectionString))
-            {
-                connection.Open();
-
-                var command = connection.CreateCommand();
-                command.CommandText = @"
-            INSERT INTO drones_y_medicamentos (numero_serie_dron, codigo_medicamento) 
-            VALUES ($nserie, $codigo);
-        ";
-
-                command.Parameters.AddWithValue("$nserie", relacion.numero_serie);
-                command.Parameters.AddWithValue("$codigo", relacion.codigo);
-
-                try
-                {
-                    command.ExecuteNonQuery();
-                }
-                catch (SqliteException ex)
-                {
-                    return BadRequest(new { message = $"Error al insertar la relación: {ex.Message}" });
-                }
-            }
-
-            return Ok(new { message = "✅ Relación dron-medicamento insertada con éxito." });
-        }
-
-        [HttpGet("mostrar_medicamentos_de_dron/{numero_serie}")]
-        public IActionResult ObtenerMedicamentosDeDron(string numero_serie)
-        {
-            if (string.IsNullOrWhiteSpace(numero_serie))
-                return BadRequest(new { message = "El número de serie no puede ser nulo." });
-
-            var medicamentos = new List<Medicamento>();
-
-            using (var connection = new SqliteConnection(_connectionString))
-            {
-                connection.Open();
-
-                var command = connection.CreateCommand();
-                command.CommandText = @"
-            SELECT m.""Codigo"", m.""Nombre"", m.""Peso""
-            FROM drones_y_medicamentos dm
-            JOIN medicamentos m ON dm.codigo_medicamento = m.""Codigo""
-            WHERE dm.numero_serie_dron = $numeroSerie;
-            ";
-
-                command.Parameters.AddWithValue("$numeroSerie", numero_serie);
-
-                using (var reader = command.ExecuteReader())
-                {
-                    while (reader.Read())
-                    {
-                        medicamentos.Add(new Medicamento
-                        {
-                            codigo = reader.GetString(0),
-                            nombre = reader.GetString(1),
-                            peso = reader.GetDouble(2)
-                        });
-                    }
-                }
-            }
-
-            // Devuelve lista (vacía si no hay ninguno) — evita NotFound salvo que quieras ese comportamiento
-            return Ok(medicamentos);
-        }
-
+        // POST: api/drones/actualizar_estado_dron?numero_serie=X&estado=Y
         [HttpPost("actualizar_estado_dron")]
-        public IActionResult ActualizarEstadoDron([FromQuery] string numero_serie, [FromQuery] string estado)
+        public IActionResult ActualizarEstadoDron([FromQuery] string? numero_serie, [FromQuery] string? estado)
         {
             if (string.IsNullOrWhiteSpace(numero_serie) || string.IsNullOrWhiteSpace(estado))
-                return BadRequest(new { message = "⚠️ El número de serie y el estado no pueden ser nulos." });
+                return BadRequest(new { message = "El número de serie y el estado no pueden ser nulos." });
 
-            using (var connection = new SqliteConnection(_connectionString))
-            {
-                connection.Open();
+            if (!EstadosValidos.Contains(estado))
+                return BadRequest(new { message = $"Estado no válido. Usa: {string.Join(", ", EstadosValidos)}." });
 
-                var command = connection.CreateCommand();
-                command.CommandText = @"
-            UPDATE drones
-            SET state = $estado
-            WHERE serial_number = $numero_serie;
-        ";
+            using var connection = AbrirConexion();
+            using var command = connection.CreateCommand();
+            command.CommandText = "UPDATE drones SET state = $estado WHERE serial_number = $numero_serie;";
+            command.Parameters.AddWithValue("$estado", estado);
+            command.Parameters.AddWithValue("$numero_serie", numero_serie);
 
-                command.Parameters.AddWithValue("$estado", estado);
-                command.Parameters.AddWithValue("$numero_serie", numero_serie);
+            if (command.ExecuteNonQuery() == 0)
+                return NotFound(new { message = $"No se encontró un dron con el número de serie '{numero_serie}'." });
 
-                try
-                {
-                    int rowsAffected = command.ExecuteNonQuery();
-
-                    if (rowsAffected == 0)
-                        return NotFound(new { message = $"⚠️ No se encontró un dron con el número de serie '{numero_serie}'." });
-
-                    return Ok(new { message = $"✅ Estado del dron {numero_serie} actualizado a '{estado}' correctamente." });
-                }
-                catch (SqliteException ex)
-                {
-                    return BadRequest(new { message = $"❌ Error al actualizar el estado del dron: {ex.Message}" });
-                }
-            }
+            return Ok(new { message = $"Estado del dron {numero_serie} actualizado a '{estado}' correctamente." });
         }
 
-        [HttpDelete("eliminar_relaciones_y_medicamentos/{numero_serie}")]
-        public IActionResult EliminarRelacionesYMedicamentos(string numero_serie)
+        // POST: api/drones/actualizar_bateria_dron?numero_serie=X&proceso=cargar|reducir
+        // "cargar" la pone al 100% y "reducir" le quita un 1% (nunca baja de 0)
+        [HttpPost("actualizar_bateria_dron")]
+        public IActionResult ActualizarBateriaDron([FromQuery] string? numero_serie, [FromQuery] string? proceso)
         {
             if (string.IsNullOrWhiteSpace(numero_serie))
                 return BadRequest(new { message = "El número de serie no puede ser nulo." });
 
-            using (var connection = new SqliteConnection(_connectionString))
-            {
-                connection.Open();
+            if (proceso != "cargar" && proceso != "reducir")
+                return BadRequest(new { message = "Proceso no válido. Usa 'cargar' o 'reducir'." });
 
-                using (var transaction = connection.BeginTransaction())
-                {
-                    try
-                    {
-                        // 1️⃣ Obtener todos los códigos de medicamentos asociados a este dron
-                        var getMedsCmd = connection.CreateCommand();
-                        getMedsCmd.CommandText = @"
-                    SELECT codigo_medicamento 
-                    FROM drones_y_medicamentos
-                    WHERE numero_serie_dron = $nserie;
-                ";
-                        getMedsCmd.Parameters.AddWithValue("$nserie", numero_serie);
+            using var connection = AbrirConexion();
 
-                        var medicamentosAsociados = new List<string>();
-                        using (var reader = getMedsCmd.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                medicamentosAsociados.Add(reader.GetString(0));
-                            }
-                        }
+            var bateriaActual = LeerBateria(connection, numero_serie);
+            if (bateriaActual == null)
+                return NotFound(new { message = $"No se encontró un dron con el número de serie '{numero_serie}'." });
 
-                        // 2️⃣ Eliminar relaciones del dron en drones_y_medicamentos
-                        var delRelationsCmd = connection.CreateCommand();
-                        delRelationsCmd.CommandText = @"
-                    DELETE FROM drones_y_medicamentos
-                    WHERE numero_serie_dron = $nserie;
-                ";
-                        delRelationsCmd.Parameters.AddWithValue("$nserie", numero_serie);
-                        delRelationsCmd.ExecuteNonQuery();
+            int nuevaBateria = proceso == "cargar" ? 100 : Math.Max(bateriaActual.Value - 1, 0);
 
-                        // 3️⃣ Eliminar los medicamentos asociados
-                        if (medicamentosAsociados.Count > 0)
-                        {
-                            var delMedsCmd = connection.CreateCommand();
-                            delMedsCmd.CommandText = @"
-                        DELETE FROM medicamentos
-                        WHERE Codigo IN (" + string.Join(",", medicamentosAsociados.Select((_, i) => "$cod" + i)) + ")";
+            using var command = connection.CreateCommand();
+            command.CommandText = "UPDATE drones SET battery = $bateria WHERE serial_number = $numero_serie;";
+            command.Parameters.AddWithValue("$bateria", nuevaBateria);
+            command.Parameters.AddWithValue("$numero_serie", numero_serie);
+            command.ExecuteNonQuery();
 
-                            for (int i = 0; i < medicamentosAsociados.Count; i++)
-                            {
-                                delMedsCmd.Parameters.AddWithValue("$cod" + i, medicamentosAsociados[i]);
-                            }
-
-                            delMedsCmd.ExecuteNonQuery();
-                        }
-
-                        transaction.Commit();
-                    }
-                    catch (SqliteException ex)
-                    {
-                        transaction.Rollback();
-                        return BadRequest(new { message = $"Error al eliminar relaciones y medicamentos: {ex.Message}" });
-                    }
-                }
-            }
-
-            return Ok(new { message = "✅ Todas las relaciones y medicamentos del dron han sido eliminados." });
+            return Ok(new { message = "Batería actualizada correctamente.", bateria = nuevaBateria });
         }
 
-
-        [HttpGet("obtener_peso_medicamento/{codigo}")]
-        public IActionResult ObtenerPesoMedicamento(string codigo)
-        {
-            if (string.IsNullOrWhiteSpace(codigo))
-                return BadRequest(new { message = "El código del medicamento no puede ser nulo." });
-
-            using (var connection = new SqliteConnection(_connectionString))
-            {
-                connection.Open();
-
-                var command = connection.CreateCommand();
-                command.CommandText = @"
-            SELECT ""Peso""
-            FROM medicamentos
-            WHERE ""Codigo"" = $codigo;
-        ";
-                command.Parameters.AddWithValue("$codigo", codigo);
-
-                var result = command.ExecuteScalar();
-
-                if (result == null)
-                    return NotFound(new { message = "El medicamento no existe." });
-
-                double peso = Convert.ToDouble(result);
-
-                return Ok(new { peso = peso });
-            }
-        }
-
-        [HttpPost("actualizar_bateria_dron")]
-        public IActionResult ActualizarBateriaDron([FromQuery] string numero_serie,[FromQuery] string proceso)
-        {
-            if (string.IsNullOrWhiteSpace(numero_serie))
-                return BadRequest(new { message = "⚠️ El número de serie no puede ser nulo." });
-
-            if (string.IsNullOrWhiteSpace(proceso))
-                return BadRequest(new { message = "⚠️ El proceso no puede ser nulo." });
-
-            using (var connection = new SqliteConnection(_connectionString))
-            {
-                connection.Open();
-
-                // 1️⃣ Obtener batería actual
-                var selectCmd = connection.CreateCommand();
-                selectCmd.CommandText =
-                    @"SELECT battery FROM drones WHERE serial_number = $numero_serie;";
-                selectCmd.Parameters.AddWithValue("$numero_serie", numero_serie);
-
-                var result = selectCmd.ExecuteScalar();
-
-                if (result == null)
-                    return NotFound(new
-                    {
-                        message = $"⚠️ No se encontró un dron con el número de serie '{numero_serie}'."
-                    });
-
-                int bateriaActual = Convert.ToInt32(result);
-                int nuevaBateria;
-
-                // 2️⃣ Lógica EXACTA según proceso
-                if (proceso == "cargar")
-                {
-                    nuevaBateria = 100;
-                }
-                else if (proceso == "reducir")
-                {
-                    nuevaBateria = bateriaActual > 0 ? bateriaActual - 1 : 0;
-                }
-                else
-                {
-                    return BadRequest(new
-                    {
-                        message = "⚠️ Proceso no válido. Usa 'cargar' o 'reducir'."
-                    });
-                }
-
-                // 3️⃣ Actualizar batería en BD
-                var updateCmd = connection.CreateCommand();
-                updateCmd.CommandText = @"
-            UPDATE drones
-            SET battery = $nuevaBateria
-            WHERE serial_number = $numero_serie;
-        ";
-
-                updateCmd.Parameters.AddWithValue("$nuevaBateria", nuevaBateria);
-                updateCmd.Parameters.AddWithValue("$numero_serie", numero_serie);
-
-                try
-                {
-                    updateCmd.ExecuteNonQuery();
-
-                    return Ok(new
-                    {
-                        message = "✅ Batería actualizada correctamente.",
-                        bateria = nuevaBateria
-                    });
-                }
-                catch (SqliteException ex)
-                {
-                    return BadRequest(new
-                    {
-                        message = $"❌ Error al actualizar la batería: {ex.Message}"
-                    });
-                }
-            }
-        }
-
-
-
+        // GET: api/drones/obtener_nivel_bateria_dron/{n_serie}
         [HttpGet("obtener_nivel_bateria_dron/{n_serie}")]
         public IActionResult ObtenerNivelBateriaDron(string n_serie)
         {
-            if (string.IsNullOrWhiteSpace(n_serie))
-                return BadRequest(new { message = "⚠️ El número de serie no puede ser nulo." });
+            using var connection = AbrirConexion();
 
-            using (var connection = new SqliteConnection(_connectionString))
-            {
-                connection.Open();
+            var bateria = LeerBateria(connection, n_serie);
+            if (bateria == null)
+                return NotFound(new { message = $"No se encontró un dron con el número de serie '{n_serie}'." });
 
-                var command = connection.CreateCommand();
-                command.CommandText = @"
-            SELECT battery
-            FROM drones
-            WHERE serial_number = $n_serie;
-            ";
-                command.Parameters.AddWithValue("$n_serie", n_serie);
-
-                var result = command.ExecuteScalar();
-
-                if (result == null)
-                    return NotFound(new { message = $"❌ No se encontró un dron con el número de serie '{n_serie}'." });
-
-                int nivelBateria = Convert.ToInt32(result);
-                return Ok(new { bateria = nivelBateria });
-            }
+            return Ok(new { bateria });
         }
 
-        // ✅ POST: api/drones/registrar_medicamento
+        //------------------------------------------------------------------------------------------------
+        // MEDICAMENTOS
+
+        // POST: api/drones/registrar_medicamento
         [HttpPost("registrar_medicamento")]
-        public IActionResult RegistrarMedicamento([FromBody] Medicamento medicamento)
+        public IActionResult RegistrarMedicamento([FromBody] Medicamento? medicamento)
         {
-            // 🔒 Validación básica
             if (medicamento == null)
                 return BadRequest(new { message = "El medicamento no puede ser nulo." });
 
-            if (string.IsNullOrWhiteSpace(medicamento.codigo) ||
-                string.IsNullOrWhiteSpace(medicamento.nombre))
+            if (string.IsNullOrWhiteSpace(medicamento.Codigo) || string.IsNullOrWhiteSpace(medicamento.Nombre))
                 return BadRequest(new { message = "Código y nombre son obligatorios." });
 
-            if (medicamento.peso <= 0)
+            if (medicamento.Peso <= 0)
                 return BadRequest(new { message = "El peso debe ser mayor que 0." });
 
-            using (var connection = new SqliteConnection(_connectionString))
+            using var connection = AbrirConexion();
+            using var command = connection.CreateCommand();
+            command.CommandText = "INSERT INTO medicamentos (Codigo, Nombre, Peso) VALUES ($codigo, $nombre, $peso);";
+            command.Parameters.AddWithValue("$codigo", medicamento.Codigo.Trim());
+            command.Parameters.AddWithValue("$nombre", medicamento.Nombre.Trim());
+            command.Parameters.AddWithValue("$peso", medicamento.Peso);
+
+            try
             {
-                connection.Open();
-
-                var command = connection.CreateCommand();
-                command.CommandText = @"
-            INSERT INTO medicamentos (Codigo, Nombre, Peso)
-            VALUES ($codigo, $nombre, $peso);
-            ";
-
-                command.Parameters.AddWithValue("$codigo", medicamento.codigo);
-                command.Parameters.AddWithValue("$nombre", medicamento.nombre);
-                command.Parameters.AddWithValue("$peso", medicamento.peso);
-
-                try
-                {
-                    command.ExecuteNonQuery();
-                }
-                catch (SqliteException ex)
-                {
-                    // 🔁 Código duplicado (PRIMARY KEY / UNIQUE)
-                    if (ex.SqliteErrorCode == 19) // SQLITE_CONSTRAINT
-                    {
-                        return BadRequest(new
-                        {
-                            message = "❌ Ya existe un medicamento con ese código."
-                        });
-                    }
-
-                    return BadRequest(new
-                    {
-                        message = $"❌ Error al insertar el medicamento: {ex.Message}"
-                    });
-                }
+                command.ExecuteNonQuery();
+            }
+            catch (SqliteException ex) when (ex.SqliteErrorCode == 19) // SQLITE_CONSTRAINT
+            {
+                return BadRequest(new { message = "Ya existe un medicamento con ese código." });
             }
 
-            return Ok(new
-            {
-                message = "💊 Medicamento registrado con éxito."
-            });
+            return Ok(new { message = "Medicamento registrado con éxito." });
         }
 
-
-        // ✅ GET: api/drones/medicamentos?estado=all|in-use|available
+        // GET: api/drones/medicamentos?estado=all|in-use|available
+        // in-use = cargados en algún dron, available = sin cargar
         [HttpGet("medicamentos")]
         public IActionResult ObtenerMedicamentos([FromQuery] string estado = "all")
         {
-            var medicamentos = new List<Medicamento>();
+            string sql = "SELECT m.Codigo, m.Nombre, m.Peso FROM medicamentos m";
 
-            // 🔹 Normalizamos el estado
-            estado = estado.ToLower();
-
-            // 🔹 SQL base
-            string sql = @"
-                        SELECT m.Codigo, m.Nombre, m.Peso
-                        FROM medicamentos m
-                        ";
-
-            // 🔹 Aplicar filtros según estado
-            if (estado == "in-use")
+            switch (estado.ToLowerInvariant())
             {
-                sql += @"
-                       INNER JOIN drones_y_medicamentos dm
-                       ON m.Codigo = dm.codigo_medicamento
-                       ";
-            }
-            else if (estado == "available")
-            {
-                sql += @"
-                       LEFT JOIN drones_y_medicamentos dm
-                       ON m.Codigo = dm.codigo_medicamento
-                       WHERE dm.codigo_medicamento IS NULL
-                       ";
-            }
-            else if (estado != "all")
-            {
-                // 🔒 Estado inválido
-                return BadRequest(new
-                {
-                    message = "Estado no válido. Usa: all, in-use o available."
-                });
+                case "all":
+                    break;
+                case "in-use":
+                    sql += " INNER JOIN drones_y_medicamentos dm ON m.Codigo = dm.codigo_medicamento";
+                    break;
+                case "available":
+                    sql += " LEFT JOIN drones_y_medicamentos dm ON m.Codigo = dm.codigo_medicamento"
+                         + " WHERE dm.codigo_medicamento IS NULL";
+                    break;
+                default:
+                    return BadRequest(new { message = "Estado no válido. Usa: all, in-use o available." });
             }
 
-            // 🔹 Acceso a BD (UNA sola vez)
-            using (var connection = new SqliteConnection(_connectionString))
-            {
-                connection.Open();
-
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = sql;
-
-                    using (var reader = command.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            medicamentos.Add(new Medicamento
-                            {
-                                codigo = reader.GetString(0),
-                                nombre = reader.GetString(1),
-                                peso = reader.GetDouble(2)
-                            });
-                        }
-                    }
-                }
-            }
-
-            return Ok(medicamentos);
+            return Ok(LeerMedicamentos(sql + ";"));
         }
 
+        // GET: api/drones/confirmar_existencia_de_medicamento/{codigo} -> true o false
+        [HttpGet("confirmar_existencia_de_medicamento/{codigo}")]
+        public IActionResult ConfirmarMedicamento(string codigo)
+        {
+            using var connection = AbrirConexion();
+            return Ok(LeerPesoMedicamento(connection, codigo) != null);
+        }
 
+        // GET: api/drones/obtener_peso_medicamento/{codigo}
+        [HttpGet("obtener_peso_medicamento/{codigo}")]
+        public IActionResult ObtenerPesoMedicamento(string codigo)
+        {
+            using var connection = AbrirConexion();
+
+            var peso = LeerPesoMedicamento(connection, codigo);
+            if (peso == null)
+                return NotFound(new { message = "El medicamento no existe." });
+
+            return Ok(new { peso });
+        }
+
+        //------------------------------------------------------------------------------------------------
+        // CARGA DE MEDICAMENTOS EN DRONES
+
+        // POST: api/drones/insertar-medicamento-dron
+        // Comprueba todas las reglas antes de cargar: el dron y el medicamento existen, el dron está en
+        // IDLE o LOADING, tiene más del 25% de batería y no se pasa de su límite de peso
+        [HttpPost("insertar-medicamento-dron")]
+        public IActionResult InsertarMedicamentoEnDron([FromBody] RelacionDM? relacion)
+        {
+            if (relacion == null || string.IsNullOrWhiteSpace(relacion.NumeroSerie) || string.IsNullOrWhiteSpace(relacion.Codigo))
+                return BadRequest(new { message = "El número de serie del dron y el código del medicamento son obligatorios." });
+
+            using var connection = AbrirConexion();
+
+            var drones = LeerDrones($"SELECT {ColumnasDron} FROM drones WHERE serial_number = $serie;",
+                ("$serie", relacion.NumeroSerie), connection);
+            if (drones.Count == 0)
+                return NotFound(new { message = "El dron no existe." });
+            var dron = drones[0];
+
+            var peso = LeerPesoMedicamento(connection, relacion.Codigo);
+            if (peso == null)
+                return NotFound(new { message = "El medicamento no existe." });
+
+            if (dron.State != "IDLE" && dron.State != "LOADING")
+                return BadRequest(new { message = "Solo se pueden cargar medicamentos en un dron en IDLE o LOADING." });
+
+            if (dron.Battery <= BateriaMinimaParaCargar)
+                return BadRequest(new { message = $"El dron necesita más del {BateriaMinimaParaCargar}% de batería para cargar." });
+
+            double pesoCargado = LeerMedicamentos(@"
+                SELECT m.Codigo, m.Nombre, m.Peso
+                FROM drones_y_medicamentos dm JOIN medicamentos m ON dm.codigo_medicamento = m.Codigo
+                WHERE dm.numero_serie_dron = $serie;", ("$serie", relacion.NumeroSerie), connection).Sum(m => m.Peso);
+
+            if (pesoCargado + peso.Value > dron.WeightLimit)
+                return BadRequest(new { message = "No se puede cargar: supera el límite de peso del dron." });
+
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+                INSERT INTO drones_y_medicamentos (numero_serie_dron, codigo_medicamento)
+                VALUES ($serie, $codigo);";
+            command.Parameters.AddWithValue("$serie", relacion.NumeroSerie);
+            command.Parameters.AddWithValue("$codigo", relacion.Codigo);
+
+            try
+            {
+                command.ExecuteNonQuery();
+            }
+            catch (SqliteException ex) when (ex.SqliteErrorCode == 19) // SQLITE_CONSTRAINT
+            {
+                return BadRequest(new { message = "Este medicamento ya está cargado en un dron." });
+            }
+
+            return Ok(new { message = "Relación dron-medicamento insertada con éxito." });
+        }
+
+        // GET: api/drones/mostrar_medicamentos_de_dron/{numero_serie}
+        [HttpGet("mostrar_medicamentos_de_dron/{numero_serie}")]
+        public IActionResult ObtenerMedicamentosDeDron(string numero_serie)
+        {
+            return Ok(LeerMedicamentos(@"
+                SELECT m.Codigo, m.Nombre, m.Peso
+                FROM drones_y_medicamentos dm JOIN medicamentos m ON dm.codigo_medicamento = m.Codigo
+                WHERE dm.numero_serie_dron = $serie;", ("$serie", numero_serie)));
+        }
+
+        // DELETE: api/drones/eliminar_relaciones_y_medicamentos/{numero_serie}
+        // Al terminar una entrega, los medicamentos del dron se han entregado: se borran de la base de datos
+        [HttpDelete("eliminar_relaciones_y_medicamentos/{numero_serie}")]
+        public IActionResult EliminarRelacionesYMedicamentos(string numero_serie)
+        {
+            using var connection = AbrirConexion();
+            using var transaction = connection.BeginTransaction();
+
+            using (var command = connection.CreateCommand())
+            {
+                command.Transaction = transaction;
+                command.CommandText = @"
+                    DELETE FROM medicamentos
+                    WHERE Codigo IN (SELECT codigo_medicamento FROM drones_y_medicamentos WHERE numero_serie_dron = $serie);
+                    DELETE FROM drones_y_medicamentos WHERE numero_serie_dron = $serie;";
+                command.Parameters.AddWithValue("$serie", numero_serie);
+                command.ExecuteNonQuery();
+            }
+
+            transaction.Commit();
+
+            return Ok(new { message = "Todas las relaciones y medicamentos del dron han sido eliminados." });
+        }
+
+        //------------------------------------------------------------------------------------------------
+        // AYUDAS DE ACCESO A DATOS
+
+        private SqliteConnection AbrirConexion()
+        {
+            var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            return connection;
+        }
+
+        private List<Drone> LeerDrones(string sql, (string nombre, object valor)? parametro = null, SqliteConnection? conexion = null)
+        {
+            var drones = new List<Drone>();
+            var connection = conexion ?? AbrirConexion();
+
+            try
+            {
+                using var command = connection.CreateCommand();
+                command.CommandText = sql;
+                if (parametro != null)
+                    command.Parameters.AddWithValue(parametro.Value.nombre, parametro.Value.valor);
+
+                using var reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    drones.Add(new Drone
+                    {
+                        Id = reader.GetInt32(0),
+                        SerialNumber = reader.GetString(1),
+                        Model = reader.GetString(2),
+                        WeightLimit = reader.GetInt32(3),
+                        Battery = reader.GetInt32(4),
+                        State = reader.GetString(5)
+                    });
+                }
+            }
+            finally
+            {
+                if (conexion == null) connection.Dispose();
+            }
+
+            return drones;
+        }
+
+        private List<Medicamento> LeerMedicamentos(string sql, (string nombre, object valor)? parametro = null, SqliteConnection? conexion = null)
+        {
+            var medicamentos = new List<Medicamento>();
+            var connection = conexion ?? AbrirConexion();
+
+            try
+            {
+                using var command = connection.CreateCommand();
+                command.CommandText = sql;
+                if (parametro != null)
+                    command.Parameters.AddWithValue(parametro.Value.nombre, parametro.Value.valor);
+
+                using var reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    medicamentos.Add(new Medicamento
+                    {
+                        Codigo = reader.GetString(0),
+                        Nombre = reader.GetString(1),
+                        Peso = reader.GetDouble(2)
+                    });
+                }
+            }
+            finally
+            {
+                if (conexion == null) connection.Dispose();
+            }
+
+            return medicamentos;
+        }
+
+        // Batería del dron o null si no existe
+        private static int? LeerBateria(SqliteConnection connection, string numeroSerie)
+        {
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT battery FROM drones WHERE serial_number = $serie;";
+            command.Parameters.AddWithValue("$serie", numeroSerie);
+
+            var result = command.ExecuteScalar();
+            return result == null ? null : Convert.ToInt32(result);
+        }
+
+        // Peso del medicamento o null si no existe
+        private static double? LeerPesoMedicamento(SqliteConnection connection, string codigo)
+        {
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT Peso FROM medicamentos WHERE Codigo = $codigo;";
+            command.Parameters.AddWithValue("$codigo", codigo);
+
+            var result = command.ExecuteScalar();
+            return result == null ? null : Convert.ToDouble(result);
+        }
     }
 }
