@@ -12,8 +12,8 @@ dist/
 .vscode/
 TestResults/
 
-# Base de datos local (se crea sola al arrancar)
-database/
+# Base de datos local (se crea sola al arrancar en datos/)
+datos/
 *.db
 *.db-shm
 *.db-wal

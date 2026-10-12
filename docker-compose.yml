@@ -6,7 +6,7 @@ services:
     ports:
       - "5212:8080"
     volumes:
-      - drones-datos:/app/database
+      - drones-datos:/app/datos
     restart: unless-stopped
 
 volumes:
