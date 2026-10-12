@@ -1,0 +1,10 @@
+**/bin/
+**/obj/
+**/database/
+dist/
+imagenes/
+.git/
+.vs/
+*.md
+*.txt
+backend/API_REST_Drones_y_Medicamentos.Tests/

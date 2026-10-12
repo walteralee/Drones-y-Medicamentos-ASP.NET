@@ -1,0 +1,13 @@
+services:
+  drones:
+    build: .
+    image: drones-y-medicamentos
+    container_name: drones-y-medicamentos
+    ports:
+      - "5212:8080"
+    volumes:
+      - drones-datos:/app/database
+    restart: unless-stopped
+
+volumes:
+  drones-datos:
