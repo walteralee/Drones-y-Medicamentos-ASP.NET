@@ -1,14 +1,13 @@
-﻿using Microsoft.AspNetCore.Components.Web;
-
 namespace API_REST_Drones_y_Medicamentos.Model
 {
+    // Medicamento que se puede cargar en un dron. En JSON: codigo, nombre, peso
     public class Medicamento
     {
-        public string codigo { get; set; }
+        public string Codigo { get; set; } = string.Empty;
 
-        public string nombre { get; set; }
+        public string Nombre { get; set; } = string.Empty;
 
-        public double peso { get; set; }
-        
+        // Peso en gramos
+        public double Peso { get; set; }
     }
 }
