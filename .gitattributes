@@ -1,0 +1,8 @@
+# Finales de línea fijos para que los scripts funcionen en cualquier sistema
+* text=auto
+*.sh text eol=lf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.png binary
+*.jpg binary
+*.ico binary
