@@ -1,0 +1,23 @@
+# Compilación de .NET
+bin/
+obj/
+publish/
+dist/
+*.user
+*.suo
+
+# Visual Studio / Rider / VS Code
+.vs/
+.idea/
+.vscode/
+TestResults/
+
+# Base de datos local (se crea sola al arrancar)
+database/
+*.db
+*.db-shm
+*.db-wal
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
