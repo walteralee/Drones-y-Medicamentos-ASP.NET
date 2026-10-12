@@ -1,10 +1,31 @@
 using Microsoft.Data.Sqlite;
-using System.IO;
 
 namespace API_REST_Drones_y_Medicamentos.Data
 {
     public static class DatabaseInitializer
     {
+        // Cadena de conexión de appsettings con la ruta del archivo .db resuelta respecto a la carpeta
+        // de la aplicación y con las claves foráneas activadas (en SQLite vienen desactivadas)
+        public static string ConnectionString(IConfiguration configuration, IHostEnvironment environment)
+        {
+            var connectionString = configuration.GetConnectionString("Sqlite");
+
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                throw new InvalidOperationException("Connection string 'Sqlite' no encontrada");
+            }
+
+            var csb = new SqliteConnectionStringBuilder(connectionString) { ForeignKeys = true };
+
+            if (csb.DataSource != ":memory:" && !Path.IsPathRooted(csb.DataSource))
+            {
+                csb.DataSource = Path.GetFullPath(Path.Combine(environment.ContentRootPath, csb.DataSource));
+            }
+
+            return csb.ToString();
+        }
+
+        // Crea la carpeta, el archivo y las tablas si todavía no existen
         public static void Initialize(string connectionString)
         {
             var dataSource = new SqliteConnectionStringBuilder(connectionString).DataSource;

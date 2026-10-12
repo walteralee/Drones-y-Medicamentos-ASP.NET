@@ -1,3 +1,4 @@
+using API_REST_Drones_y_Medicamentos.Data;
 using API_REST_Drones_y_Medicamentos.Model;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
@@ -28,17 +29,9 @@ namespace API_REST_Drones_y_Medicamentos.Controllers
 
         private readonly string _connectionString;
 
-        public DronesController(IConfiguration configuration)
+        public DronesController(IConfiguration configuration, IWebHostEnvironment environment)
         {
-            var connectionString = configuration.GetConnectionString("Sqlite");
-
-            if (string.IsNullOrWhiteSpace(connectionString))
-            {
-                throw new InvalidOperationException("Connection string 'Sqlite' no encontrada");
-            }
-
-            // Activamos las claves foráneas, que en SQLite vienen desactivadas por defecto
-            _connectionString = new SqliteConnectionStringBuilder(connectionString) { ForeignKeys = true }.ToString();
+            _connectionString = DatabaseInitializer.ConnectionString(configuration, environment);
         }
 
         //------------------------------------------------------------------------------------------------

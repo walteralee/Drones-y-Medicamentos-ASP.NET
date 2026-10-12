@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using API_REST_Drones_y_Medicamentos.Data;
-using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,24 +14,10 @@ builder.Services.AddCors(options =>
     options.AddPolicy("PermitirTodo", policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 });
 
-// La base de datos SQLite se guarda en una ruta relativa a la carpeta de la aplicación
-var connectionString = builder.Configuration.GetConnectionString("Sqlite");
-if (string.IsNullOrWhiteSpace(connectionString))
-{
-    throw new InvalidOperationException("Connection string 'Sqlite' no encontrada");
-}
-
-var csb = new SqliteConnectionStringBuilder(connectionString);
-if (!Path.IsPathRooted(csb.DataSource) && csb.DataSource != ":memory:")
-{
-    csb.DataSource = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, csb.DataSource));
-}
-builder.Configuration["ConnectionStrings:Sqlite"] = csb.ToString();
-
 var app = builder.Build();
 
 // Crea la base de datos y las tablas si no existen
-DatabaseInitializer.Initialize(csb.ToString());
+DatabaseInitializer.Initialize(DatabaseInitializer.ConnectionString(app.Configuration, app.Environment));
 
 // Swagger siempre disponible en /swagger para probar la API
 app.UseSwagger();
