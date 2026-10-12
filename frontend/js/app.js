@@ -310,18 +310,29 @@ async function recargarBateria(numeroSerie) {
   }
 }
 
-// Todos los drones pierden un 1% de batería cada minuto mientras la web está abierta
+// Todos los drones pierden un 1% de batería cada minuto mientras la web está abierta.
+// Se pide la lista actual a la API cada vez (no la que hay en pantalla), así no se
+// pregunta por drones que ya no existen
 function iniciarDescargaDeBateria() {
   setInterval(async () => {
-    for (const dron of drones) {
-      try {
-        dron.battery = await Api.actualizarBateria(dron.serialNumber, "reducir");
-      } catch (error) {
-        console.error("Error actualizando batería:", error);
+    try {
+      const actuales = await Api.obtenerDrones();
+      for (const dron of actuales) {
+        await Api.actualizarBateria(dron.serialNumber, "reducir");
       }
+      await recargarListado();
+    } catch (error) {
+      console.error("Error actualizando la batería:", error);
     }
-    renderDrones();
   }, MS_DESCARGA_BATERIA);
+}
+
+// Vuelve a pedir los drones respetando el filtro elegido (Todos o Disponibles)
+function recargarListado() {
+  const soloDisponibles = document
+    .getElementById("filter-btn-disponibles")
+    .classList.contains("active");
+  return soloDisponibles ? cargarDisponibles() : cargarTodos();
 }
 
 // ---------------------------------------------------------------------
