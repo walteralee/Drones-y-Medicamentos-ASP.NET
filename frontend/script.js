@@ -6,8 +6,20 @@ const registerMedicamentBtn = document.getElementById(
 );
 const cargasBateriaActivas = {};
 
-// URL base de tu API
-const API_BASE = "http://localhost:5212/api/drones";
+// URL base de la API. Si la web la sirve la propia API (lo normal) se usa la misma dirección.
+// Si se abre aparte (archivo suelto o "python -m http.server 5500") se llama a localhost:5212
+const API_ORIGIN =
+  location.protocol === "file:" || location.port === "5500"
+    ? "http://localhost:5212"
+    : "";
+const API_BASE = `${API_ORIGIN}/api/drones`;
+
+// Escapa el texto que viene del usuario antes de meterlo en el HTML (evita inyectar código)
+function escapeHtml(texto) {
+  const div = document.createElement("div");
+  div.textContent = String(texto ?? "");
+  return div.innerHTML;
+}
 
 // ✅ Cambiar de sección
 function showSection(section) {
@@ -232,11 +244,11 @@ function renderDrones() {
     card.innerHTML = `
       <img src="imagenes/dron.jpg" alt="Dron">
       <div class="drone-info">
-        <p><strong>Número de serie:</strong> ${drone.serialNumber}</p>
-        <p><strong>Modelo:</strong> ${drone.model}</p>
+        <p><strong>Número de serie:</strong> ${escapeHtml(drone.serialNumber)}</p>
+        <p><strong>Modelo:</strong> ${escapeHtml(drone.model)}</p>
         <p><strong>Límite peso:</strong> ${drone.weightLimit} gr</p>
         <p><strong>Batería:</strong> ${drone.battery}%</p>
-        <p><strong>Estado:</strong> ${drone.state}</p>
+        <p><strong>Estado:</strong> ${escapeHtml(drone.state)}</p>
 
         <button class="load-btn" ${
           drone.battery <= 25 ? "disabled" : ""
@@ -283,13 +295,13 @@ function renderDrones() {
     });
 
     // Proceso de entrega
+    // Proceso de entrega: el dron pasa por todos los estados y, al volver, se vacía
+    // (sus medicamentos ya se han entregado)
     startBtn.addEventListener("click", async () => {
-      drone.state = "LOADED";
-      await modificarEstadoDron(drone.serialNumber, "LOADED");
-      renderDrones();
-      procesoDeEntrega(drone);
-      vaciarDron(drone);
-      renderDrones();
+      startBtn.disabled = true;
+      await procesoDeEntrega(drone);
+      await vaciarDron(drone);
+      await cargarTodos();
     });
 
     droneList.appendChild(card);
@@ -299,7 +311,7 @@ function renderDrones() {
 //------------------------------------------------------- LISTAR MEDICAMENTOS ----------------------------------------------------------------------
 
 const medicamentList = document.getElementById("medicament-list");
-const API_MEDICAMENTOS = "http://localhost:5212/api/Drones/medicamentos";
+const API_MEDICAMENTOS = `${API_BASE}/medicamentos`;
 
 // Se ejecuta al pulsar el botón del menú
 async function cargarMedicamentos(estado = "all") {
@@ -340,8 +352,8 @@ function renderMedicamentos(medicamentos) {
     card.innerHTML = `
       <img src="imagenes/medicamento.png" alt="Medicamento">
       <div class="medicament-info">
-        <p><strong>Código:</strong> ${med.codigo}</p>
-        <p><strong>Nombre:</strong> ${med.nombre}</p>
+        <p><strong>Código:</strong> ${escapeHtml(med.codigo)}</p>
+        <p><strong>Nombre:</strong> ${escapeHtml(med.nombre)}</p>
         <p><strong>Peso:</strong> ${med.peso} g</p>
       </div>
     `;
@@ -350,19 +362,25 @@ function renderMedicamentos(medicamentos) {
   });
 }
 
-document.querySelectorAll(".filter-btn").forEach((btn) => {
+// Marca como activo el botón pulsado dentro de su grupo de filtros
+function activarFiltro(btn) {
+  btn
+    .closest(".filter-buttons")
+    .querySelectorAll(".filter-btn")
+    .forEach((b) => b.classList.remove("active"));
+  btn.classList.add("active");
+}
+
+// Filtros de drones (Todos / Disponibles)
+document.querySelectorAll("#list-section .filter-btn").forEach((btn) => {
+  btn.addEventListener("click", () => activarFiltro(btn));
+});
+
+// Filtros de medicamentos (Todos / En uso / Disponibles)
+document.querySelectorAll("#medicaments-section .filter-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
-    // Quitar active a todos
-    document
-      .querySelectorAll(".filter-btn")
-      .forEach((b) => b.classList.remove("active"));
-
-    // Activar el actual
-    btn.classList.add("active");
-
-    // Cargar según filtro
-    const estado = btn.dataset.filter;
-    cargarMedicamentos(estado);
+    activarFiltro(btn);
+    cargarMedicamentos(btn.dataset.filter);
   });
 });
 
@@ -401,7 +419,7 @@ function showLoadForm(card, drone) {
     const existe = await confirmarMedicamento(codigo);
 
     if (existe) {
-      const limite_peso = await comprobarLimitePeso(card, codigo);
+      const limite_peso = await comprobarLimitePeso(drone, codigo);
 
       if (limite_peso) {
         const ok = await insertarDronMedicamento(numero_serie_dron, codigo);
@@ -430,7 +448,7 @@ function showLoadForm(card, drone) {
 async function confirmarMedicamento(codigo) {
   try {
     const response = await fetch(
-      `http://localhost:5212/api/drones/confirmar_existencia_de_medicamento/${codigo}`
+      `${API_BASE}/confirmar_existencia_de_medicamento/${encodeURIComponent(codigo)}`
     );
 
     if (!response.ok) {
@@ -445,23 +463,19 @@ async function confirmarMedicamento(codigo) {
   }
 }
 
-async function comprobarLimitePeso(card, codigo) {
+async function comprobarLimitePeso(drone, codigo) {
   try {
-    // 1️⃣ Obtener el límite de peso del dron desde el card
-    const total = parseFloat(
-      card
-        .querySelector(".drone-info p:nth-child(3)")
-        .textContent.match(/\d+/)[0] // extrae el número de "Límite peso: xxx gr"
+    // 1️⃣ Límite de peso del dron
+    const total = drone.weightLimit;
+
+    // 2️⃣ Sumar los pesos de los medicamentos que ya lleva (se piden a la API, no se leen de la pantalla)
+    const cargadosRes = await fetch(
+      `${API_BASE}/mostrar_medicamentos_de_dron/${encodeURIComponent(
+        drone.serialNumber
+      )}`
     );
-
-    // 2️⃣ Sumar todos los pesos actuales de los medicamentos del dron
-    const medicamentItems = card.querySelectorAll(".med-item");
-    let cantidad_actual = 0;
-
-    medicamentItems.forEach((item) => {
-      const match = item.textContent.match(/(\d+)\s*g/);
-      if (match) cantidad_actual += parseFloat(match[1]);
-    });
+    const cargados = cargadosRes.ok ? await cargadosRes.json() : [];
+    const cantidad_actual = cargados.reduce((suma, m) => suma + m.peso, 0);
 
     // 3️⃣ Obtener el peso del medicamento a agregar desde la API
     const response = await fetch(
@@ -496,7 +510,7 @@ async function comprobarLimitePeso(card, codigo) {
 async function insertarDronMedicamento(nserie_dron, codigo_medicamento) {
   try {
     const response = await fetch(
-      "http://localhost:5212/api/drones/insertar-medicamento-dron",
+      `${API_BASE}/insertar-medicamento-dron`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -514,14 +528,8 @@ async function insertarDronMedicamento(nserie_dron, codigo_medicamento) {
       );
       return true;
     } else {
-      const error = await response.json();
-      if (error.message?.includes("UNIQUE")) {
-        alert("⚠️ Este medicamento ya está asignado a un dron.");
-      } else {
-        alert(
-          "❌ Error al insertar medicamento. Verifica si existe o ya está insertado."
-        );
-      }
+      const error = await response.json().catch(() => ({}));
+      alert("❌ " + (error.message || "Error al insertar el medicamento."));
       return false;
     }
   } catch (error) {
@@ -557,7 +565,7 @@ async function cargarMedicamentosParaDrone(card, numeroSerie) {
         .map(
           (m) => `
         <div class="med-item">
-          <strong>${m.codigo}</strong> — ${m.nombre} — ${m.peso} g
+          <strong>${escapeHtml(m.codigo)}</strong> — ${escapeHtml(m.nombre)} — ${m.peso} g
         </div>
       `
         )
@@ -576,7 +584,7 @@ async function cargarMedicamentosParaDrone(card, numeroSerie) {
 async function modificarEstadoDron(nserie_dron, estado) {
   try {
     const response = await fetch(
-      `http://localhost:5212/api/drones/actualizar_estado_dron?numero_serie=${encodeURIComponent(
+      `${API_BASE}/actualizar_estado_dron?numero_serie=${encodeURIComponent(
         nserie_dron
       )}&estado=${encodeURIComponent(estado)}`,
       { method: "POST" }
@@ -624,7 +632,7 @@ async function procesoDeEntrega(dron, intervalo = 3000) {
     // Renderizar cambios en la UI
     renderDrones();
 
-    //Reducri la bateria del dron en 1%
+    // Reducir la batería del dron en 1%
     await actualizar_bateria_dron(dron.serialNumber, "reducir");
 
     cargarTodos();
@@ -641,7 +649,7 @@ async function procesoDeEntrega(dron, intervalo = 3000) {
 async function vaciarDron(drone) {
   try {
     const response = await fetch(
-      `http://localhost:5212/api/drones/eliminar_relaciones_y_medicamentos/${encodeURIComponent(
+      `${API_BASE}/eliminar_relaciones_y_medicamentos/${encodeURIComponent(
         drone.serialNumber
       )}`,
       { method: "DELETE" }
